@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TonerTrack Pro - Toner & Printer Inventory System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        },
+                        toner: {
+                            cyan: '#06b6d4',
+                            magenta: '#ec4899',
+                            yellow: '#eab308',
+                            black: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 7px; height: 7px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & System Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-xl tracking-tight text-slate-900">TonerTrack<span class="text-sky-600">Pro</span></span>
+                            <span class="bg-sky-100 text-sky-800 text-xs px-2 py-0.5 rounded-full font-medium border border-sky-200">v2.4 Live</span>
+                        </div>
+                        <p class="text-xs text-slate-500 hidden sm:block">Enterprise Toner & Printer Fleet Manager</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <div id="lowStockBadge" class="hidden items-center bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2"></span>
+                        <span id="lowStockCountText">0 items low</span>
+                    </div>
+
+                    <button onclick="openIssueModal()" class="inline-flex items-center px-3 py-2 border border-slate-300 text-xs sm:text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition shadow-xs focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                        <svg class="w-4 h-4 mr-1.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Issue Toner
+                    </button>
+                    <button onclick="openRestockModal()" class="inline-flex items-center px-3 py-2 border border-slate-300 text-xs sm:text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition shadow-xs focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                        <svg class="w-4 h-4 mr-1.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Restock
+                    </button>
+                    <button onclick="openAddTonerModal()" class="inline-flex items-center px-3.5 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition shadow-xs shadow-sky-500/20 focus:ring-2 focus:ring-sky-500 focus:outline-hidden">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Add Cartridge
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="border-t border-slate-200 bg-slate-50/70">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <nav class="flex space-x-1 sm:space-x-8 overflow-x-auto py-2 text-sm font-medium">
+                    <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn active-tab flex items-center px-3 py-2 rounded-lg text-sky-700 bg-sky-100/80 font-semibold whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                        Cartridges Inventory
+                    </button>
+                    <button onclick="switchTab('printers')" id="tab-printers" class="tab-btn flex items-center px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        Printer Fleet (<span id="tabCountPrinters">0</span>)
+                    </button>
+                    <button onclick="switchTab('reorders')" id="tab-reorders" class="tab-btn flex items-center px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        Reorder List (<span id="tabCountReorders">0</span>)
+                    </button>
+                    <button onclick="switchTab('transactions')" id="tab-transactions" class="tab-btn flex items-center px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Audit / History
+                    </button>
+                    <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn flex items-center px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Analytics
+                    </button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn flex items-center px-3 py-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 whitespace-nowrap">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        Data & Backup
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <!-- Top KPI Dashboard Cards -->
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4 no-print">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Cartridges</p>
+                    <p id="kpiTotalPieces" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+                    <p class="text-xs text-slate-400 mt-0.5"><span id="kpiTotalModels">0</span> distinct models</p>
+                </div>
+                <div class="w-11 h-11 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Low / Out of Stock</p>
+                    <p id="kpiLowStock" class="text-2xl font-bold text-rose-600 mt-1">0</p>
+                    <p class="text-xs text-rose-400 mt-0.5">Needs attention</p>
+                </div>
+                <div class="w-11 h-11 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Active Printers</p>
+                    <p id="kpiPrinters" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Across <span id="kpiLocations">0</span> locations</p>
+                </div>
+                <div class="w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Inventory Value</p>
+                    <p id="kpiTotalValue" class="text-2xl font-bold text-emerald-700 mt-1">$0.00</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Estimated replacement</p>
+                </div>
+                <div class="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 1: TONER INVENTORY VIEW -->
+        <section id="view-inventory" class="tab-content block space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row gap-3 items-center justify-between no-print">
+                <div class="w-full md:w-96 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="inventorySearch" oninput="filterInventory()" placeholder="Search model, OEM code, brand, printer..." class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500 focus:border-transparent transition">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <select id="filterBrand" onchange="filterInventory()" class="text-xs sm:text-sm border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-slate-700 focus:ring-2 focus:ring-sky-500">
+                        <option value="ALL">All Brands</option>
+                        <option value="HP">HP</option>
+                        <option value="Canon">Canon</option>
+                        <option value="Brother">Brother</option>
+                        <option value="Epson">Epson</option>
+                        <option value="Xerox">Xerox</option>
+                        <option value="Kyocera">Kyocera</option>
+                    </select>
+
+                    <select id="filterColor" onchange="filterInventory()" class="text-xs sm:text-sm border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-slate-700 focus:ring-2 focus:ring-sky-500">
+                        <option value="ALL">All Colors</option>
+                        <option value="Black">⚫ Black (K)</option>
+                        <option value="Cyan">🔵 Cyan (C)</option>
+                        <option value="Magenta">🔴 Magenta (M)</option>
+                        <option value="Yellow">🟡 Yellow (Y)</option>
+                        <option value="Drum / Waste">⚙️ Drum / Waste</option>
+                    </select>
+
+                    <select id="filterStatus" onchange="filterInventory()" class="text-xs sm:text-sm border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-slate-700 focus:ring-2 focus:ring-sky-500">
+                        <option value="ALL">All Stock Levels</option>
+                        <option value="CRITICAL">⚠️ Below Threshold</option>
+                        <option value="NORMAL">✅ In Stock</option>
+                    </select>
+
+                    <button onclick="exportInventoryToCSV()" title="Export CSV" class="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    </button>
+                    <button onclick="window.print()" title="Print List" class="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inventory Table Container -->
+            <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase text-slate-500 tracking-wider">
+                                <th class="py-3.5 px-4">Color & Model</th>
+                                <th class="py-3.5 px-4">Brand / OEM Part #</th>
+                                <th class="py-3.5 px-4">Compatible Printers</th>
+                                <th class="py-3.5 px-4 text-center">In Stock</th>
+                                <th class="py-3.5 px-4">Threshold</th>
+                                <th class="py-3.5 px-4">Location</th>
+                                <th class="py-3.5 px-4">Unit Cost</th>
+                                <th class="py-3.5 px-4 text-right no-print">Quick Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="noInventoryMessage" class="hidden p-12 text-center">
+                    <p class="text-sm font-medium text-slate-700">No toner cartridges found</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: PRINTER FLEET VIEW -->
+        <section id="view-printers" class="tab-content hidden space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between no-print">
+                <input type="text" id="printerSearch" oninput="filterPrinters()" placeholder="Search printer, IP, or department..." class="w-full sm:w-80 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-sky-500">
+                <button onclick="openAddPrinterModal()" class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">
+                    + Add New Printer
+                </button>
+            </div>
+            <div id="printerGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </section>
+
+        <!-- TAB 3: REORDERS VIEW -->
+        <section id="view-reorders" class="tab-content hidden space-y-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Purchase Reorder Sheet</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">Automated purchase list based on minimum reorder threshold triggers.</p>
+                    </div>
+                    <div class="flex items-center space-x-2 no-print">
+                        <button onclick="copyReorderSummary()" class="inline-flex items-center px-3 py-2 border border-slate-300 text-xs sm:text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition">Copy PO Text</button>
+                        <button onclick="window.print()" class="inline-flex items-center px-3.5 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition">Print Order</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto mt-4">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase text-slate-500">
+                                <th class="py-3 px-4">Item & Code</th>
+                                <th class="py-3 px-4">Brand</th>
+                                <th class="py-3 px-4 text-center">Current Qty</th>
+                                <th class="py-3 px-4 text-center">Min Threshold</th>
+                                <th class="py-3 px-4 text-center text-sky-700 font-bold">Suggested Qty</th>
+                                <th class="py-3 px-4 text-right">Est. Cost</th>
+                                <th class="py-3 px-4 text-right no-print">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reorderTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="reorderEmptyNotice" class="hidden p-8 text-center text-slate-500">
+                    <p class="font-medium text-slate-800">All toner stock levels are healthy!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: TRANSACTIONS AUDIT -->
+        <section id="view-transactions" class="tab-content hidden space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Toner Movement & Issue Log</h3>
+                <button onclick="exportHistoryCSV()" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50">Export CSV</button>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase text-slate-500">
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4">Model</th>
+                            <th class="py-3 px-4 text-center">Qty</th>
+                            <th class="py-3 px-4">Destination</th>
+                            <th class="py-3 px-4">Technician</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 5: ANALYTICS -->
+        <section id="view-analytics" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                    <h3 class="font-bold text-slate-900 mb-4">Stock by Brand</h3>
+                    <div class="h-64 flex items-center justify-center"><canvas id="chartBrand"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+                    <h3 class="font-bold text-slate-900 mb-4">Stock by Color (CMYK)</h3>
+                    <div class="h-64 flex items-center justify-center"><canvas id="chartColor"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 6: SETTINGS & BACKUP -->
+        <section id="view-settings" class="tab-content hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs max-w-2xl space-y-4">
+                <h3 class="text-lg font-bold text-slate-900">Data Management</h3>
+                <p class="text-sm text-slate-500">All data persists in your browser. You can export complete JSON backups or restore data anytime.</p>
+                <div class="flex gap-3 pt-4 border-t border-slate-100">
+                    <button onclick="exportDataJSON()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-medium transition">Download Backup JSON</button>
+                    <label class="cursor-pointer px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium transition">
+                        Upload JSON Restore
+                        <input type="file" id="importJsonInput" accept=".json" onchange="importDataJSON(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Generic Modal Containers -->
+    <div id="modalToner" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 border border-slate-200">
+            <h3 id="modalTonerTitle" class="font-bold text-slate-900 text-base mb-4">Add Toner Cartridge</h3>
+            <form id="tonerForm" onsubmit="handleSaveToner(event)" class="space-y-4 text-sm">
+                <input type="hidden" id="tonerId">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="tonerModel" required placeholder="Model (e.g. 58A)" class="p-2 border rounded-lg">
+                    <select id="tonerBrand" class="p-2 border rounded-lg">
+                        <option value="HP">HP</option>
+                        <option value="Canon">Canon</option>
+                        <option value="Brother">Brother</option>
+                        <option value="Xerox">Xerox</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="tonerColor" class="p-2 border rounded-lg">
+                        <option value="Black">Black</option>
+                        <option value="Cyan">Cyan</option>
+                        <option value="Magenta">Magenta</option>
+                        <option value="Yellow">Yellow</option>
+                        <option value="Drum / Waste">Drum / Waste</option>
+                    </select>
+                    <input type="text" id="tonerPartNo" placeholder="Part Number" class="p-2 border rounded-lg">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <input type="number" id="tonerQuantity" min="0" placeholder="Qty" value="5" class="p-2 border rounded-lg">
+                    <input type="number" id="tonerMinStock" min="0" placeholder="Min" value="2" class="p-2 border rounded-lg">
+                    <input type="number" id="tonerCost" min="0" step="0.01" placeholder="Cost ($)" value="75.00" class="p-2 border rounded-lg">
+                </div>
+                <input type="text" id="tonerLocation" placeholder="Shelf Location" class="w-full p-2 border rounded-lg">
+                <input type="text" id="tonerCompatibility" placeholder="Compatible Printers" class="w-full p-2 border rounded-lg">
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button type="button" onclick="closeModal('modalToner')" class="px-4 py-2 border rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 text-white rounded-lg">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Issue Modal -->
+    <div id="modalIssue" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-200">
+            <h3 class="font-bold text-slate-900 text-base mb-4">Issue Toner</h3>
+            <form id="issueForm" onsubmit="handleIssueToner(event)" class="space-y-4 text-sm">
+                <select id="issueTonerSelect" required class="w-full p-2 border rounded-lg"></select>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="issueQuantity" min="1" value="1" class="p-2 border rounded-lg">
+                    <input type="text" id="issueDepartment" required placeholder="Department" class="p-2 border rounded-lg">
+                </div>
+                <input type="text" id="issueTechnician" required placeholder="Technician Name" class="w-full p-2 border rounded-lg">
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button type="button" onclick="closeModal('modalIssue')" class="px-4 py-2 border rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-lg">Confirm Dispatch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Restock Modal -->
+    <div id="modalRestock" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-200">
+            <h3 class="font-bold text-slate-900 text-base mb-4">Restock Inventory</h3>
+            <form id="restockForm" onsubmit="handleRestockToner(event)" class="space-y-4 text-sm">
+                <select id="restockTonerSelect" required class="w-full p-2 border rounded-lg"></select>
+                <input type="number" id="restockQuantity" min="1" value="5" class="w-full p-2 border rounded-lg">
+                <input type="text" id="restockTechnician" required placeholder="Received by" class="w-full p-2 border rounded-lg">
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button type="button" onclick="closeModal('modalRestock')" class="px-4 py-2 border rounded-lg">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">Receive Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="modalConfirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center border border-slate-200">
+            <h3 id="confirmTitle" class="font-bold text-slate-900 text-lg">Are you sure?</h3>
+            <p id="confirmMessage" class="text-sm text-slate-500 mt-2">This action cannot be undone.</p>
+            <div class="mt-6 flex justify-center space-x-3">
+                <button onclick="closeModal('modalConfirm')" class="px-4 py-2 border rounded-lg">Cancel</button>
+                <button id="confirmExecuteBtn" class="px-4 py-2 bg-rose-600 text-white rounded-lg">Proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        const STORAGE_KEY_TONERS = 'tonertrack_inventory_items_v2';
+        const STORAGE_KEY_PRINTERS = 'tonertrack_printers_v2';
+        const STORAGE_KEY_HISTORY = 'tonertrack_history_v2';
+
+        const DEFAULT_TONERS = [
+            { id: 'T101', model: 'HP 58A', partNo: 'CF258A', brand: 'HP', color: 'Black', quantity: 8, minStock: 3, cost: 89.99, location: 'Shelf A-1', compatibility: 'LaserJet Pro M404, M428' },
+            { id: 'T102', model: 'HP 414A Black', partNo: 'W2020A', brand: 'HP', color: 'Black', quantity: 4, minStock: 2, cost: 94.50, location: 'Shelf A-2', compatibility: 'Color LaserJet Pro M454, M479' },
+            { id: 'T103', model: 'HP 414A Cyan', partNo: 'W2021A', brand: 'HP', color: 'Cyan', quantity: 1, minStock: 2, cost: 114.99, location: 'Shelf A-2', compatibility: 'Color LaserJet Pro M454, M479' },
+            { id: 'T104', model: 'HP 414A Magenta', partNo: 'W2023A', brand: 'HP', color: 'Magenta', quantity: 0, minStock: 2, cost: 114.99, location: 'Shelf A-2', compatibility: 'Color LaserJet Pro M454, M479' },
+            { id: 'T105', model: 'HP 414A Yellow', partNo: 'W2022A', brand: 'HP', color: 'Yellow', quantity: 2, minStock: 2, cost: 114.99, location: 'Shelf A-2', compatibility: 'Color LaserJet Pro M454, M479' },
+            { id: 'T106', model: 'Brother TN-760', partNo: 'TN760', brand: 'Brother', color: 'Black', quantity: 12, minStock: 4, cost: 58.00, location: 'Shelf B-3', compatibility: 'HL-L2350DW, MFC-L2710DW' },
+            { id: 'T107', model: 'Canon 054 Black', partNo: '3028C001', brand: 'Canon', color: 'Black', quantity: 5, minStock: 2, cost: 68.99, location: 'Shelf C-1', compatibility: 'imageCLASS MF642Cdw' }
+        ];
+
+        const DEFAULT_PRINTERS = [
+            { id: 'P201', name: 'Main Office HP 428', model: 'HP LaserJet Pro MFP M428fdw', ip: '192.168.1.101', dept: 'Operations', status: 'Active', toners: 'HP 58A (CF258A)' },
+            { id: 'P202', name: 'Color Marketing MFP', model: 'HP Color LaserJet Pro M479fdw', ip: '192.168.1.104', dept: 'Marketing', status: 'Low Toner', toners: 'HP 414A Black, Cyan, Magenta, Yellow' }
+        ];
+
+        let toners = [], printers = [], historyLog = [], brandChart = null, colorChart = null;
+
+        function loadDatabase() {
+            try {
+                toners = JSON.parse(localStorage.getItem(STORAGE_KEY_TONERS)) || [...DEFAULT_TONERS];
+                printers = JSON.parse(localStorage.getItem(STORAGE_KEY_PRINTERS)) || [...DEFAULT_PRINTERS];
+                historyLog = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY)) || [];
+            } catch(e) {
+                toners = [...DEFAULT_TONERS];
+                printers = [...DEFAULT_PRINTERS];
+            }
+        }
+
+        function saveDatabase() {
+            localStorage.setItem(STORAGE_KEY_TONERS, JSON.stringify(toners));
+            localStorage.setItem(STORAGE_KEY_PRINTERS, JSON.stringify(printers));
+            localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(historyLog));
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-sky-100/80', 'text-sky-700', 'font-semibold');
+                btn.classList.add('text-slate-600');
+            });
+            const active = document.getElementById(`view-${tabId}`);
+            const btn = document.getElementById(`tab-${tabId}`);
+            if (active) active.classList.remove('hidden');
+            if (btn) btn.classList.add('bg-sky-100/80', 'text-sky-700', 'font-semibold');
+            if (tabId === 'analytics') renderCharts();
+        }
+
+        function updateKPICounters() {
+            const total = toners.reduce((a, b) => a + Number(b.quantity || 0), 0);
+            const low = toners.filter(t => Number(t.quantity) <= Number(t.minStock)).length;
+            const value = toners.reduce((a, b) => a + (Number(b.quantity || 0) * Number(b.cost || 0)), 0);
+
+            document.getElementById('kpiTotalPieces').innerText = total;
+            document.getElementById('kpiTotalModels').innerText = toners.length;
+            document.getElementById('kpiLowStock').innerText = low;
+            document.getElementById('kpiPrinters').innerText = printers.length;
+            document.getElementById('tabCountPrinters').innerText = printers.length;
+            document.getElementById('tabCountReorders').innerText = low;
+            document.getElementById('kpiTotalValue').innerText = '$' + value.toFixed(2);
+        }
+
+        function renderInventoryTable(items = toners) {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+            items.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 border-b border-slate-100';
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-slate-800">${t.model} (${t.color})</td>
+                    <td class="py-3 px-4 font-mono text-xs">${t.brand} ${t.partNo}</td>
+                    <td class="py-3 px-4 text-xs text-slate-600">${t.compatibility}</td>
+                    <td class="py-3 px-4 text-center font-bold">${t.quantity}</td>
+                    <td class="py-3 px-4 text-xs text-slate-500">Min: ${t.minStock}</td>
+                    <td class="py-3 px-4 text-xs text-slate-500">${t.location}</td>
+                    <td class="py-3 px-4 font-mono text-xs">$${Number(t.cost).toFixed(2)}</td>
+                    <td class="py-3 px-4 text-right space-x-1 no-print">
+                        <button onclick="quickAdjust('${t.id}', 1)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold">+1</button>
+                        <button onclick="quickAdjust('${t.id}', -1)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold">-1</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function quickAdjust(id, diff) {
+            const item = toners.find(t => t.id === id);
+            if (!item) return;
+            if (Number(item.quantity) + diff < 0) return;
+            item.quantity = Number(item.quantity) + diff;
+            saveDatabase();
+            refreshAll();
+            showToast(`${item.model} updated to ${item.quantity}`, 'success');
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function openAddTonerModal() { openModal('modalToner'); }
+        function openIssueModal() {
+            const sel = document.getElementById('issueTonerSelect');
+            sel.innerHTML = '';
+            toners.forEach(t => sel.innerHTML += `<option value="${t.id}">${t.model} (Stock: ${t.quantity})</option>`);
+            openModal('modalIssue');
+        }
+        function openRestockModal() {
+            const sel = document.getElementById('restockTonerSelect');
+            sel.innerHTML = '';
+            toners.forEach(t => sel.innerHTML += `<option value="${t.id}">${t.model} (Stock: ${t.quantity})</option>`);
+            openModal('modalRestock');
+        }
+
+        function handleSaveToner(e) {
+            e.preventDefault();
+            toners.push({
+                id: 'T' + Date.now(),
+                model: document.getElementById('tonerModel').value,
+                brand: document.getElementById('tonerBrand').value,
+                color: document.getElementById('tonerColor').value,
+                partNo: document.getElementById('tonerPartNo').value,
+                quantity: Number(document.getElementById('tonerQuantity').value),
+                minStock: Number(document.getElementById('tonerMinStock').value),
+                cost: parseFloat(document.getElementById('tonerCost').value) || 0,
+                location: document.getElementById('tonerLocation').value,
+                compatibility: document.getElementById('tonerCompatibility').value
+            });
+            saveDatabase();
+            closeModal('modalToner');
+            refreshAll();
+            showToast('Cartridge added', 'success');
+        }
+
+        function handleIssueToner(e) {
+            e.preventDefault();
+            const id = document.getElementById('issueTonerSelect').value;
+            const qty = Number(document.getElementById('issueQuantity').value);
+            const t = toners.find(x => x.id === id);
+            if (t && t.quantity >= qty) {
+                t.quantity -= qty;
+                historyLog.push({ date: new Date().toLocaleString(), type: 'Issued', model: t.model, qty, destination: document.getElementById('issueDepartment').value, technician: document.getElementById('issueTechnician').value });
+                saveDatabase();
+                closeModal('modalIssue');
+                refreshAll();
+                showToast(`Issued ${qty} units of ${t.model}`, 'success');
+            }
+        }
+
+        function handleRestockToner(e) {
+            e.preventDefault();
+            const id = document.getElementById('restockTonerSelect').value;
+            const qty = Number(document.getElementById('restockQuantity').value);
+            const t = toners.find(x => x.id === id);
+            if (t) {
+                t.quantity = Number(t.quantity) + qty;
+                historyLog.push({ date: new Date().toLocaleString(), type: 'Restocked', model: t.model, qty, destination: 'Storage', technician: document.getElementById('restockTechnician').value });
+                saveDatabase();
+                closeModal('modalRestock');
+                refreshAll();
+                showToast(`Restocked ${qty} units of ${t.model}`, 'success');
+            }
+        }
+
+        function refreshAll() {
+            updateKPICounters();
+            renderInventoryTable();
+        }
+
+        function showToast(msg, type = 'info') {
+            const el = document.createElement('div');
+            el.className = 'px-4 py-2 bg-slate-800 text-white rounded-lg shadow-lg text-xs';
+            el.innerText = msg;
+            document.getElementById('toastContainer').appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        window.onload = () => {
+            loadDatabase();
+            refreshAll();
+        };
+    </script>
+</body>
+</html>
